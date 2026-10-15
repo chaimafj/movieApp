@@ -1,0 +1,99 @@
+<ion-header>
+  <ion-toolbar color="tertiary">
+    <ion-title>Administration</ion-title>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-segment [value]="tab()" (ionChange)="tab.set($any($event.detail.value))">
+      <ion-segment-button value="movies"><ion-label>Films</ion-label></ion-segment-button>
+      <ion-segment-button value="users"><ion-label>Utilisateurs</ion-label></ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (tab() === 'movies') {
+    <form (ngSubmit)="addMovie()">
+      <ion-list>
+        <ion-list-header><ion-label>Ajouter un film à la base</ion-label></ion-list-header>
+        <ion-item>
+          <ion-input label="Titre *" labelPlacement="floating" name="title" [(ngModel)]="title" required></ion-input>
+          @if (movieService.tmdbEnabled) {
+            <ion-button slot="end" fill="outline" size="small" (click)="fillFromTmdb()" [disabled]="lookingUp()">
+              @if (lookingUp()) { <ion-spinner name="crescent"></ion-spinner> } @else {
+                <ion-icon slot="start" name="cloud-download"></ion-icon> Remplir depuis TMDB
+              }
+            </ion-button>
+          }
+        </ion-item>
+        <ion-item>
+          <ion-textarea label="Synopsis" labelPlacement="floating" name="overview" [autoGrow]="true"
+            [(ngModel)]="overview"></ion-textarea>
+        </ion-item>
+        <ion-item>
+          <ion-input label="URL de l'affiche" labelPlacement="floating" type="url" name="posterUrl"
+            [(ngModel)]="posterUrl"></ion-input>
+          @if (posterUrl) {
+            <ion-thumbnail slot="end"><img [src]="posterUrl" alt="Aperçu de l'affiche" /></ion-thumbnail>
+          }
+        </ion-item>
+        <ion-item>
+          <ion-input label="Date de sortie" labelPlacement="stacked" type="date" name="releaseDate"
+            [(ngModel)]="releaseDate"></ion-input>
+        </ion-item>
+      </ion-list>
+      <div class="ion-padding-horizontal">
+        <ion-button expand="block" type="submit" [disabled]="saving()">
+          @if (saving()) { <ion-spinner name="crescent"></ion-spinner> } @else {
+            <ion-icon slot="start" name="add"></ion-icon> Ajouter
+          }
+        </ion-button>
+      </div>
+    </form>
+
+    <ion-list>
+      <ion-list-header>
+        <ion-label>Films ajoutés <ion-badge>{{ movieService.customMovies().length }}</ion-badge></ion-label>
+      </ion-list-header>
+      @for (movie of movieService.customMovies(); track movie.id) {
+        <ion-item>
+          <ion-thumbnail slot="start">
+            @if (movie.posterUrl) { <img [src]="movie.posterUrl" [alt]="movie.title" /> }
+            @else { <div class="poster-placeholder">🎬</div> }
+          </ion-thumbnail>
+          <ion-label>
+            <h2>{{ movie.title }}</h2>
+            <p>{{ movie.releaseDate || '—' }}</p>
+          </ion-label>
+          <ion-button slot="end" fill="clear" color="danger" (click)="deleteMovie(movie)" aria-label="Supprimer">
+            <ion-icon slot="icon-only" name="trash"></ion-icon>
+          </ion-button>
+        </ion-item>
+      } @empty {
+        <ion-item><ion-note>Aucun film ajouté pour l'instant.</ion-note></ion-item>
+      }
+    </ion-list>
+  } @else {
+    <ion-list>
+      <ion-list-header><ion-label>Activer / désactiver les comptes</ion-label></ion-list-header>
+      @for (u of users(); track u.uid) {
+        <ion-item>
+          <ion-avatar slot="start">
+            @if (u.photo) { <img [src]="u.photo" alt="" /> }
+          </ion-avatar>
+          <ion-label>
+            <h2>
+              {{ u.prenom }} {{ u.nom }}
+              @if (u.role === 'admin') { <ion-badge color="tertiary">admin</ion-badge> }
+              @if (u.disabled) { <ion-badge color="danger">désactivé</ion-badge> }
+            </h2>
+            <p>{{ u.email }} · {{ u.age }} ans · {{ u.favorites.length || 0 }} favoris</p>
+          </ion-label>
+          <ion-toggle slot="end" [checked]="!u.disabled"
+            [disabled]="u.uid === myUid() || u.role === 'admin'"
+            (ionChange)="setActive(u, $event.detail.checked)"
+            [attr.aria-label]="'Compte actif : ' + u.prenom + ' ' + u.nom"></ion-toggle>
+        </ion-item>
+      }
+    </ion-list>
+  }
+</ion-content>

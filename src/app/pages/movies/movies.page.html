@@ -1,0 +1,68 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Films</ion-title>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar placeholder="Rechercher un film" [debounce]="400"
+      (ionInput)="onSearch($event.detail.value)"></ion-searchbar>
+  </ion-toolbar>
+</ion-header>
+
+<ng-template #movieItem let-movie>
+  <ion-item>
+    <ion-thumbnail slot="start">
+      @if (movie.posterUrl) {
+        <img [src]="movie.posterUrl" [alt]="movie.title" loading="lazy" />
+      } @else {
+        <div class="poster-placeholder">🎬</div>
+      }
+    </ion-thumbnail>
+    <ion-label class="ion-text-wrap">
+      <h2>{{ movie.title }}</h2>
+      <p>
+        {{ year(movie.releaseDate) }}
+        @if (movie.rating) { · <ion-icon name="star" color="warning"></ion-icon> {{ movie.rating.toFixed(1) }} }
+      </p>
+      <p class="overview">{{ movie.overview }}</p>
+    </ion-label>
+    <ion-button slot="end" fill="clear" (click)="toggle(movie)"
+      [attr.aria-label]="favoriteIds().has(movie.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'">
+      <ion-icon slot="icon-only" color="danger" [name]="favoriteIds().has(movie.id) ? 'heart' : 'heart-outline'"></ion-icon>
+    </ion-button>
+  </ion-item>
+</ng-template>
+
+<ion-content>
+  <ion-list>
+    @if (customMovies().length) {
+      <ion-list-header>
+        <ion-label>Ajoutés par l'administrateur <ion-badge color="tertiary">{{ customMovies().length }}</ion-badge></ion-label>
+      </ion-list-header>
+      @for (movie of customMovies(); track movie.id) {
+        <ng-container *ngTemplateOutlet="movieItem; context: { $implicit: movie }"></ng-container>
+      }
+    }
+
+    @if (movieService.tmdbEnabled) {
+      <ion-list-header>
+        <ion-label>{{ search() ? 'Résultats TMDB' : 'Populaires (TMDB)' }}</ion-label>
+      </ion-list-header>
+      @for (movie of tmdbMovies(); track movie.id) {
+        <ng-container *ngTemplateOutlet="movieItem; context: { $implicit: movie }"></ng-container>
+      }
+      @if (loading()) {
+        <div class="ion-text-center ion-padding"><ion-spinner></ion-spinner></div>
+      } @else if (!tmdbMovies().length) {
+        <ion-note class="ion-padding" style="display:block">Aucun film trouvé.</ion-note>
+      }
+    } @else {
+      <ion-note class="ion-padding" style="display:block">
+        Clé TMDB non configurée : seuls les films ajoutés par l'administrateur sont affichés.
+      </ion-note>
+    }
+  </ion-list>
+
+  <ion-infinite-scroll [disabled]="!hasMore() || loading()" (ionInfinite)="loadMore($event)">
+    <ion-infinite-scroll-content loadingText="Chargement…"></ion-infinite-scroll-content>
+  </ion-infinite-scroll>
+</ion-content>
